@@ -11,10 +11,10 @@ elif [[ $# -ne 0 ]]; then
   exit 1
 fi
 
-branch=oreo-m2-s3-release
-aosp_version=OPM2.171026.006.C1
-aosp_version_real=OPM2.171026.006.C1
-aosp_tag=android-8.1.0_r30
+branch=oreo-m2-s4-release
+aosp_version=OPM2.171026.006.H1
+aosp_version_real=OPM2.171026.006.H1
+aosp_tag=android-8.1.0_r36
 
 aosp_forks=(
   device_common
@@ -68,10 +68,10 @@ aosp_forks=(
 )
 
 declare -A kernels=(
-  [google_marlin]=android-8.1.0_r0.64 # June
-  [google_wahoo]=android-8.1.0_r0.65 # June
-  [huawei_angler]=android-8.1.0_r0.61 # June
-  [lge_bullhead]=android-8.1.0_r0.62 # June
+  [google_marlin]=android-8.1.0_r0.75 # July
+  [google_wahoo]=android-8.1.0_r0.78 # July
+  [huawei_angler]=android-8.1.0_r0.80 # July
+  [lge_bullhead]=android-8.1.0_r0.81 # July
   [linaro_hikey]=dc721a4ac71d
 )
 
