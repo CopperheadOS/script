@@ -12,9 +12,11 @@ elif [[ $# -ne 0 ]]; then
 fi
 
 branch=oreo-m2-s4-release
+old_branch=oreo-m2-s3-release
 aosp_version=OPM2.171026.006.H1
 aosp_version_real=OPM2.171026.006.H1
 aosp_tag=android-8.1.0_r36
+old_aosp_tag=android-8.1.0_r30
 
 aosp_forks=(
   device_common
@@ -94,12 +96,22 @@ copperhead=(
   vendor_linaro
 )
 
+PARENT_DIR="$PWD"
+
 for repo in "${aosp_forks[@]}"; do
   echo -e "\n>>> $(tput setaf 3)Handling $repo$(tput sgr0)"
 
-  cd $repo || exit 1
+  if [[ $repo == platform_build ]]; then
+    dir="build/make"
+  else
+    dir=`echo $repo | sed s%_%/%g | sed s%platform/%%`
+  fi
 
-  git checkout $branch || exit 1
+  cd $dir || exit 1
+
+  git checkout $branch || repo start $branch
+  upstream_repo=`echo $repo | sed s%_%/%g`
+  git remote add upstream https://android.googlesource.com/$upstream_repo
 
   if [[ -n $DELETE_TAG ]]; then
     git tag -d $DELETE_TAG
@@ -129,11 +141,18 @@ for repo in "${aosp_forks[@]}"; do
   else
     git fetch upstream --tags || exit 1
 
-    git pull --rebase upstream $aosp_tag || exit 1
-    git push -f || exit 1
+    if [[ $repo == platform_manifest ]]; then
+      sed -i s%refs/heads/$old_branch%refs/heads/$branch% default.xml || exit 1
+      sed -i s%refs/tags/$old_aosp_tag%refs/tags/$aosp_tag% default.xml || exit 1
+#      git diff $old_aosp_tag $aosp_tag | git apply || exit 1
+      git commit default.xml -m "Update to $aosp_version" || exit 1
+    else
+      git pull --rebase upstream $aosp_tag || exit 1
+    fi
+    #git push -f $branch || exit 1
   fi
 
-  cd .. || exit 1
+  cd $PARENT_DIR || exit 1
 done
 
 for kernel in ${!kernels[@]}; do
