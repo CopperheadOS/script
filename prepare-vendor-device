@@ -1,0 +1,105 @@
+#!/bin/bash
+###############################################################################
+# prepare-vendor-device - wrapper for android-prepare-vendor
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+DEVICE=""
+BUILD_ID=""
+SRC_IMAGE=""
+
+usage () {
+    while [ $# -gt 0 ]; do echo "$1" 1>&2; shift; done
+    echo "usage: $(basename $0) <device> <build_id> [src_img]"
+    echo
+    echo "notes:"
+    echo "    * must be run from the top level of a repo checkout"
+    echo "    * if src_img is not provided, a-p-v will try to download instead"
+    echo "    * device must be one of: bullhead, angler, sailfish, marlin, walleye, taimen"
+    echo "    * build_id is just the BUILD_ID, without the appended number"
+    echo "    * requires android-prepare-vendor patched for URL and fuse-ext2"
+    exit 1
+}
+
+[ $# -eq 0 ] && usage
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        "-h"|"--help")
+            usage
+            ;;
+        *)
+            if [ -z "${DEVICE}" ]
+            then
+                DEVICE="$1"
+            elif [ -z "${BUILD_ID}" ]
+            then
+                BUILD_ID="$1"
+            elif [ -z "${SRC_IMAGE}" ]
+            then
+                SRC_IMAGE="$1"
+            else
+                usage "unknown argument given: $1"
+            fi
+            ;;
+    esac
+    shift
+done
+
+[ ! -f vendor/android-prepare-vendor/execute-all.sh ] \
+    && usage "android-prepare-vendor not found"
+
+VENDOR=""
+
+case "${DEVICE}" in
+    "bullhead")
+        VENDOR="lge"
+        ;;
+    "angler")
+        VENDOR="huawei"
+        ;;
+    "sailfish"|"marlin"|"walleye"|"taimen")
+        VENDOR="google_devices"
+        ;;
+    *)
+        usage "unsupported device given: ${DEVICE}"
+        ;;
+esac
+
+mkdir -vp vendor/out
+
+IMAGE_OPT=""
+if [ -n "${SRC_IMAGE}" -a -f "${SRC_IMAGE}" ]
+then
+    IMAGE_OPT="-i ${SRC_IMAGE}"
+fi
+vendor/android-prepare-vendor/execute-all.sh \
+    --yes --keep \
+    -d $DEVICE \
+    -b $BUILD_ID \
+    -o vendor/out/ \
+    ${IMAGE_OPT}
+[ $? -ne 0 ] && usage "execute-all.sh failed to run without error"
+
+build_id=$(echo $BUILD_ID | tr '[:upper:]' '[:lower:]')
+VENDOR_OUT="vendor/out/${DEVICE}/${build_id}/vendor/${VENDOR}/${DEVICE}"
+
+if [ -d "${VENDOR_OUT}" ]
+then
+    mkdir -vp vendor/${VENDOR}
+    rm -rf vendor/${VENDOR}/${DEVICE}
+    mv -v "${VENDOR_OUT}" vendor/${VENDOR}/
+else
+    usage "output path not found: ${VENDOR_OUT}"
+fi
+
+case "${DEVICE}" in
+    "sailfish")
+        rm -rf vendor/${VENDOR}/marlin
+        MARLIN_OUT="vendor/out/${DEVICE}/${build_id}/vendor/${VENDOR}/marlin"
+        mv -v "${MARLIN_OUT}" vendor/${VENDOR}/
+        ;;
+esac
+
+echo "exiting normally."
+exit 0
