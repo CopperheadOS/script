@@ -1,0 +1,53 @@
+#!/bin/bash
+###############################################################################
+# git-tag-exists - check if the given tag exists
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+usage () {
+    echo "usage: $(basename $0) [-h|-r|-q|-n] <tag-name>"
+    echo
+    echo "options:"
+    echo "    -h        display this help message"
+    echo "    -q        silence output, check exit code"
+    echo "    -n        invert the output (false if true, etc)"
+    exit 1
+}
+QUIET=""
+REMOTE=""
+TAG="unset"
+INVERT=""
+while [ $# -gt 0 ]
+do
+    case "${1}" in
+        "-h"|"--help")
+            usage
+            ;;
+        "-q"|"--quiet")
+            QUIET="-q"
+            ;;
+        "-n"|"--not")
+            INVERT="true"
+            ;;
+        *)
+            TAG="$1"
+            ;;
+    esac
+    shift
+done
+if [ "${TAG}" == "unset" ]
+then
+    echo "error: tag name is a required argument"
+    usage
+fi
+if [ "${INVERT}" == "true" ]
+then
+    cache=$(git tag)
+    echo "${cache}" | egrep -q "\\<${TAG}\\>"
+    rv=$?
+    echo "${cache}" | egrep ${QUIET} -v "\\<${TAG}\\>"
+    [ $rv -eq 0 ] && exit 1
+    exit 0
+fi
+git tag \
+    | egrep ${QUIET} "\\<${TAG}\\>"
+exit $?

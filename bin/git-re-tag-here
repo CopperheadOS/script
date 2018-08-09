@@ -1,0 +1,82 @@
+#!/bin/bash
+###############################################################################
+# git-re-tag-here - git tag here, delete if already exists (dangerous!)
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+
+usage () {
+    while [ $# -gt 0 ]; do echo "$1" >&2; shift; done
+    echo "usage: $(basename $0) [options] <tag> [message]";
+    echo
+    echo "options:"
+    echo "    -h          this helpful message"
+    echo "    -s          sign the tag when creating"
+    echo "    -p remote   push tag to given remote"
+    echo "    -d          delete from remote before push"
+    exit 1
+}
+
+TAG_NAME=""
+TAG_MESSAGE=""
+TAG_REMOTE=""
+TAG_PUSH_RM="false"
+TAG_SIGN=""
+
+[ $# -eq 0 ] && usage
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        "-h"|"--help")
+            usage
+            ;;
+        "-p"|"--push")
+            [ -z "$2" ] && usage "-p requires a remote name"
+            TAG_REMOTE="$2"
+            shift
+            ;;
+        "-d"|"--delete")
+            TAG_PUSH_RM="true"
+            ;;
+        "-s"|"--sign")
+            TAG_SIGN="-s"
+            ;;
+        *)
+            if [ -z "${TAG_NAME}" ]
+            then
+                TAG_NAME="$1"
+            elif [ -z "${TAG_MESSAGE}" ]
+            then
+                TAG_MESSAGE="$1"
+            else
+                usage "unknown argument: $1"
+            fi
+    esac
+    shift
+done
+
+if [ "${TAG_PUSH_RM}" == "true" -a -z "${TAG_REMOTE}" ]
+then
+    usage "-d requires -r option as well"
+fi
+
+[ -z "${TAG_MESSAGE}" ] && TAG_MESSAGE="${TAG_NAME}"
+
+if git tag | egrep -q "^${TAG_NAME}\$"
+then
+    git tag -d "${TAG_NAME}"
+fi
+
+echo "creating local tag ${TAG_NAME}"
+git tag ${TAG_SIGN} "${TAG_NAME}" -m "${TAG_MESSAGE}"
+
+if [ "${TAG_PUSH_RM}" == "true" ]
+then
+    git push ${TAG_REMOTE} :${TAG_NAME}
+fi
+
+if [ -n "${TAG_REMOTE}" ]
+then
+    git push ${TAG_REMOTE} ${TAG_NAME}
+fi
+
+exit $?

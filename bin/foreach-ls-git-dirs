@@ -1,0 +1,204 @@
+#!/bin/bash
+###############################################################################
+# foreach-ls-git-dirs - execute command for each git repo found in given path
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+function usage () {
+    while [ $# -gt 0 ]; do echo "error: $1" 1>&2; shift; done
+    echo "usage: $(basename $0) [options] <path> <cmd> [cmd...]"
+    echo
+    echo "For all git repos found by ls-git-dirs, evalutate the given commands"
+    echo "and (optionally) log all the output."
+    echo
+    echo "arguments:"
+    echo "    <path>      path to top level of git repo tree (for ls-git-dirs)"
+    echo "    <cmd>       one (or more) command strings to eval per repo"
+    echo
+    echo "options:"
+    echo "    -h          display this helpful message"
+    echo "    -q          run silent, run deep"
+    echo "    -v          be verbose"
+    echo "    -n          no path prefix in output"
+    echo "    -l /file    log all output to given file path"
+    echo "    -w remote   only process repos with given remote"
+    echo "    -W remote   only process repos without given remote"
+    echo "    -b branch   only process repos on given branch"
+    echo "    -B branch   only process repos not on given branch"
+    echo "    -e          exit on first error encountered"
+    exit 1
+}
+ARGC=$(($#-1))
+TARGET=""
+declare -a COMMANDS=()
+QUIET="false"
+VERBOSE="false"
+NO_PREFIX="false"
+LOG_FILE=""
+WITH_REMOTE=""
+WITHOUT_REMOTE=""
+WITH_BRANCH=""
+WITHOUT_BRANCH=""
+EXIT_ON_ERROR=""
+consume="false"
+for i in $(seq 0 $ARGC)
+do
+    [ "${consume}" == "true" ] && consume=false && continue
+    n=$((ARGC-i))
+    arg=${BASH_ARGV[$n]}
+    narg=${BASH_ARGV[$n-1]}
+    case "${arg}" in
+        "-h"|"--help")      usage;;
+        "-q"|"--quiet")     QUIET="true";;
+        "-v"|"--verbose")   VERBOSE="true";;
+        "-n"|"--no-prefix") NO_PREFIX="true";;
+        "-e"|"--err-exit")  EXIT_ON_ERROR="true";;
+        "-l"|"--log")
+            if [ -n "${narg}" -a ! -d "${narg}" ]
+            then
+                LOG_FILE="${narg}"
+                consume="true"
+            else
+                usage "log file path required, must not exist or be a file"
+            fi
+            ;;
+        "-w"|"--with-remote")
+            if [ -n "${narg}" -a "${narg}" != "-w" ]
+            then
+                WITH_REMOTE="${narg}"
+                consume="true"
+            else
+                usage "--with-remote requires a remote name"
+            fi
+            ;;
+        "-W"|"--without-remote")
+            if [ -n "${narg}" -a "${narg}" != "-w" ]
+            then
+                WITHOUT_REMOTE="${narg}"
+                consume="true"
+            else
+                usage "--without-remote requires a remote name"
+            fi
+            ;;
+        "-b"|"--with-branch")
+            if [ -n "${narg}" -a "${narg}" != "-w" ]
+            then
+                WITH_BRANCH="${narg}"
+                consume="true"
+            else
+                usage "--with-branch requires a branch name"
+            fi
+            ;;
+        "-B"|"--without-branch")
+            if [ -n "${narg}" -a "${narg}" != "-w" ]
+            then
+                WITHOUT_BRANCH="${narg}"
+                consume="true"
+            else
+                usage "--without-branch requires a branch name"
+            fi
+            ;;
+        *)
+            if [ -z "${TARGET}" ]
+            then
+                if [ -d "${arg}" ]
+                then
+                    TARGET="${arg}"
+                else
+                    usage "not a directory: ${arg}"
+                fi
+            else
+                COMMANDS=("${COMMANDS[@]}" "${arg}")
+            fi
+            ;;
+    esac
+done
+
+function log_output () {
+    if [ $QUIET == "true" ]
+    then
+        [ -n "${LOG_FILE}" ] && cat - > "${LOG_FILE}"
+    else
+        if [ -n "${LOG_FILE}" ]
+        then
+            tee -a "${LOG_FILE}"
+        else
+            cat -
+        fi
+    fi
+}
+
+function filter_output () {
+    rx="s@^\s*\[.+?\]\s*@@;"
+    [ "$NO_PREFIX" == "false" ] && rx=$(printf 's@^@%s: @;' "${1}")
+    ( perl -pe 's/^(?!\[out\]\s)/[out] /;' ) 2>&1 \
+        | perl -pe 's/^(?!\[out\]\s)/[err] /;' \
+        | perl -pe "$rx" \
+        | log_output
+}
+
+function stdout () {
+    if [ $VERBOSE == "true" ]
+    then
+        while [ $# -gt 0 ]
+        do
+            echo "$1" | filter_output "alert";
+            shift;
+        done
+    fi
+}
+
+function stderr () {
+    while [ $# -gt 0 ]; do echo "$1" 1>&2 | filter_output "error"; shift; done
+}
+
+MAIN_PID=$$
+function die () {
+    stderr "$@"
+    kill -15 -$MAIN_PID
+}
+
+# business logic
+ls-git-dirs "${TARGET}" | while read p
+do
+    re=$(printf 's@^\Q%s\E@@;s@^/@@;' "${TARGET}")
+    export NAME=$(echo "${p}" | perl -pe "$re")
+    pushd "${p}" 2>&1 > /dev/null
+    export GIT_REMOTES=$(git remote -v)
+    export REMOTES=$(echo -e "${GIT_REMOTES}" | grep '(fetch)' | awk {'print $1'})
+    for r in ${REMOTES}
+    do
+        url=$(echo "${GIT_REMOTES}" | egrep "^${r}" | grep '(fetch)' | perl -pe 's!^\S+\s*(.+?)\s*\(fetch\)\s*$!$1!')
+        rn=$(echo ${r} | perl -pe 's![^_a-zA-Z0-9]!_!g;s!_$!!;')
+        export REMOTE_${rn}="${url}"
+    done
+    export BRANCH=$(git branch --list | grep '*' | perl -pe 's!^\*\s*!!;')
+    if [ -n "${WITH_BRANCH}" ]
+    then # skip if not match
+        [ "${BRANCH}" != "${WITH_BRANCH}" ] \
+            && popd > /dev/null && continue
+    fi
+    if [ -n "${WITHOUT_BRANCH}" ]
+    then # skip if match
+        [ "${BRANCH}" == "${WITHOUT_BRANCH}" ] \
+            && popd > /dev/null && continue
+    fi
+    if [ -n "${WITH_REMOTE}" ]
+    then # skip if not found
+        echo "${REMOTES}" | egrep -q "^${WITH_REMOTE}\$"
+        [ $? -ne 0 ] && popd > /dev/null && continue
+    fi
+    if [ -n "${WITHOUT_REMOTE}" ]
+    then # skip if found
+        echo "${REMOTES}" | egrep -q "^${WITHOUT_REMOTE}\$"
+        [ $? -eq 0 ] && popd > /dev/null && continue
+    fi
+    for COMMAND in "${COMMANDS[@]}"
+    do
+        [ $QUIET == "true" ] || stdout "eval \"${COMMAND}\""
+        ( eval "${COMMAND}" | perl -pe 's/^/[out] /;' ) 2>&1 | filter_output "${NAME}"
+        [ $? -ne 0 -a "${EXIT_ON_ERROR}" == "true" ] \
+            && die "exiting on error"
+    done
+    popd > /dev/null
+done
+exit $?

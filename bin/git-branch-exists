@@ -1,0 +1,60 @@
+#!/bin/bash
+###############################################################################
+# git-branch-exists - check if the given branch exists
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+usage () {
+    echo "usage: $(basename $0) [-h|-r|-q|-n] <branch-name>"
+    echo
+    echo "options:"
+    echo "    -h        display this help message"
+    echo "    -r        include remotes when searching"
+    echo "    -q        silence output, check exit code"
+    echo "    -n        invert the output (false if true, etc)"
+    exit 1
+}
+QUIET=""
+REMOTE=""
+BRANCH="unset"
+INVERT=""
+QUIET=""
+BRANCH=""
+while [ $# -gt 0 ]
+do
+    case "${1}" in
+        "-h"|"--help")
+            usage
+            ;;
+        "-q"|"--quiet")
+            QUIET="-q"
+            ;;
+        "-r"|"--remotes")
+            REMOTE="--all"
+            ;;
+        "-n"|"--not")
+            INVERT="true"
+            ;;
+        *)
+            BRANCH="$1"
+            ;;
+    esac
+    shift
+done
+if [ "${BRANCH}" == "unset" ]
+then
+    echo "error: branch name is a required argument"
+    usage
+fi
+if [ "${INVERT}" == "true" ]
+then
+    cache=$(git branch --list ${REMOTE} | grep -v ' -> ')
+    echo "${cache}" | egrep -q "\\b${BRANCH}\\b"
+    rv=$?
+    echo "${cache}" | egrep ${QUIET} -v "\\b${BRANCH}\\b"
+    [ $rv -eq 0 ] && exit 1
+    exit 0
+fi
+git branch --list ${REMOTE} \
+    | grep -v ' -> ' \
+    | egrep ${QUIET} "\\b${BRANCH}\\b"
+exit $?

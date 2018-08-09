@@ -1,0 +1,41 @@
+#!/bin/bash
+###############################################################################
+# ls-git-dirs - list git repos found in given path
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+if [ $# -ne 1 -o "$1" == "-h" ]
+then
+    echo "usage: $(basename $0) [/path]"
+    exit 1
+fi
+TARGET="$1"
+[ "${TARGET}" == "." ] && TARGET="${PWD}"
+TARGET=$(unset CDPATH && cd "$(dirname "${TARGET}")" && echo "${PWD}/$(basename "${TARGET}")")
+
+function abspath () {
+    echo $(unset CDPATH && cd "$(dirname "${1}")" && echo "${PWD}/$(basename "${1}")")
+}
+
+DEPTH=0
+function recurse () {
+    DEPTH=$((DEPTH+1))
+    local target="$1"
+    for item in `/bin/ls -1 "${target}" | sort -V`
+    do
+        local iter="${target}/${item}"
+        if [ -d "${iter}/.git" ]
+        then # clone
+            echo "${iter}" | perl -pe "s~^${TARGET}~~;s~^/~~;"
+        elif [ -d "${iter}/refs" -a -d "${iter}/objects" ]
+        then # bare
+            echo "${iter}" | perl -pe "s~^${TARGET}~~;s~^/~~;"
+        elif [ -d "${iter}" ]
+        then
+            recurse "${iter}"
+        fi
+    done
+    DEPTH=$((DEPTH-1))
+}
+# business logic
+recurse "${TARGET}"
+exit 0

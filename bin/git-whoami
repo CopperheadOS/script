@@ -1,0 +1,68 @@
+#!/bin/bash
+###############################################################################
+# git-whoami - display the currently configured user name and/or email
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+MODE_SHOW=short
+SHOW_MAIL=1
+SHOW_NAME=1
+SHOW_SIGN=1
+
+usage () {
+    while [ $# -gt 0 ]; do echo "error: $1"; shift; done
+    echo "usage: $(basename $0) [-h|-N|-E|-S|-l]"
+    echo
+    echo "options: "
+    echo "    -h --help      display this help message"
+    echo "    -E --no-email  hide the user email"
+    echo "    -N --no-name   hide the user name"
+    echo "    -S --no-sign   hide the user signing key"
+    echo "    -l --long      be more descriptive (YAML)"
+    exit 1
+}
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        "-h"|"--help")
+            usage
+            ;;
+        "-E"|"--no-email") SHOW_MAIL=0;;
+        "-N"|"--no-name")  SHOW_NAME=0;;
+        "-S"|"--no-sign")  SHOW_SIGN=0;;
+        "-l"|"--long")     MODE_SHOW=long;;
+        *)
+            echo "ignoring unknown argument: \"$1\""
+            ;;
+    esac
+    shift
+done
+
+RAW=$(git config --list | egrep '^user\.' | perl -pe 's!^user\.(name|email|signingkey)\=!${1} !')
+NAME=$(echo "${RAW}" | egrep "^name "  | tail -1 | awk '{$1="";print $0}' | perl -pe 's!^\s+?!!;')
+MAIL=$(echo "${RAW}" | egrep "^email " | tail -1 | awk '{$1="";print $0}' | perl -pe 's!^\s+?!!;')
+SIGN=$(echo "${RAW}" | egrep "^signingkey " | tail -1 | awk '{$1="";print $0}' | perl -pe 's!^\s+?!!;')
+
+case "$MODE_SHOW" in
+    "short")
+        case "${SHOW_NAME}${SHOW_MAIL}${SHOW_SIGN}" in
+            "000")
+                usage "maximum any two of the three options: -E, -N or -S"
+                ;;
+            "100") echo "${NAME}";;
+            "010") echo "${MAIL}";;
+            "001") echo "${SIGN}";;
+            "110") echo "${NAME} <${MAIL}>";;
+            "011") echo "<${MAIL}> (${SIGN})";;
+            "101") echo "${NAME} (${SIGN})";;
+            "111") echo "${NAME} <${MAIL}> (${SIGN})";;
+        esac
+        ;;
+    *)
+        echo "---"
+        [ $SHOW_NAME -eq 1 ] && echo "Name: ${NAME}"
+        [ $SHOW_MAIL -eq 1 ] && echo "Email: ${MAIL}"
+        [ $SHOW_SIGN -eq 1 ] && echo "KeyID: ${SIGN}"
+        ;;
+esac
+

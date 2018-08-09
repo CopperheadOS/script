@@ -1,0 +1,30 @@
+#!/bin/bash
+###############################################################################
+# git-show-author - archive patches per commit for current repository
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+if [ $# -ne 2 -o "$1" == "-h" ]
+then
+    echo "usage: $(basename $0) <email@address> </dst/dir/path>"
+    exit 1
+fi
+SRC_ADDR="$1"
+DST_PATH="$2"
+#: setup paths
+[ -d "${DST_PATH}" ] || mkdir -vp "${DST_PATH}"
+PROJECT="$(basename "$(git remote -v | egrep '^origin' | head -1 | awk {'print $2'})" ".git")"
+[ -d "${DST_PATH}/${PROJECT}" ] || mkdir -vp "${DST_PATH}/${PROJECT}"
+#: get list of commits
+COMMITS=$(git log --author="${SRC_ADDR}" \
+                 | egrep "^commit " \
+                 | awk {'print $2'} )
+IDX=0
+for CID in ${COMMITS}
+do
+    INDEX=$(printf "%.04d" $IDX)
+    TARGET="${DST_PATH}/${PROJECT}/changeset-${INDEX}-${CID}.patch"
+    echo -en "exporting: ${TARGET}"
+    git show -U0 "${CID}" > "${TARGET}"
+    echo
+    IDX=$((IDX+1))
+done

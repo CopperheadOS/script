@@ -1,0 +1,83 @@
+#!/bin/bash
+###############################################################################
+# dump-kernel-info - retrieve the Linux kernel version from an image file
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+export LC_ALL=C
+
+usage () {
+    while [ $# -gt 0 ]; do echo "$1" 1>&2; shift; done
+    echo "usage: $(basename $0) [-h|-lz|-gz] <image>"
+    echo
+    echo "options:"
+    echo "    -h              this helpful message"
+    echo "    -lz             use lz compression method"
+    echo "    -gz             use gz compression method"
+    exit 1
+}
+
+IMAGE=""
+MODE="auto"
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        "-h"|"--help")
+            usage
+            ;;
+        "-lz")
+            MODE="lz"
+            ;;
+        "-gz")
+            MODE="gz"
+            ;;
+        *)
+            if [ -z "${IMAGE}" ]
+            then
+                IMAGE="$1"
+            else
+                usage "unknown argument: $1"
+            fi
+            ;;
+    esac
+    shift
+done
+
+if [ "${MODE}" == "auto" ]
+then
+    INFO=$(file "${IMAGE}")
+    echo "${INFO}" | grep -iq 'gzip compressed'
+    if [ $? -eq 0 ]
+    then
+        MODE="gz"
+    else
+        echo "${INFO}" | grep -iq 'LZ4 compressed'
+        if [ $? -eq 0 ]
+        then
+            MODE="lz"
+        else
+            usage "unknown file type: ${INFO}"
+        fi
+    fi
+fi
+
+case "${MODE}" in
+    "gz")
+        SKIP=$(od -Ad -x -w2 ${IMAGE} | grep 8b1f | cut -d ' ' -f1 | head -1)
+        dd if="${IMAGE}" bs=1 skip="${SKIP}" 2>/dev/null \
+            | zgrep -a 'Linux version' \
+            | perl -pe 's!^.*Linux version!Linux version!'
+        ;;
+    "lz")
+        lz4cat "${IMAGE}" \
+            | grep -a 'Linux version' \
+            | perl -pe 's!^.*Linux version!Linux version!'
+        ;;
+    "auto")
+        usage "unable to determine image compression type"
+        ;;
+    *)
+        usage "unknown mode: ${MODE}"
+        ;;
+esac
+exit 0
