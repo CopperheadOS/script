@@ -1,0 +1,97 @@
+#!/bin/bash
+###############################################################################
+# dump-kernel-info - retrieve the Linux kernel version from an image file
+# Copyright (C) 2018  Copperhead Limited
+###############################################################################
+
+BUILD_DIR="${PWD}"
+
+usage () {
+    while [ $# -gt 0 ]; do echo "$1" 1>&2; shift; done
+    echo "usage: $(basename $0)"
+    echo
+    echo "notes:"
+    echo "    * this script must be run from the top level of a repo checkout"
+    exit 1
+}
+
+die () {
+    while [ $# -gt 0 ]; do echo "Fatal Error: $1" 1>&2; shift; done
+    exit 254
+}
+
+gen_verity_key () {
+    DEVICE="$1"
+    pushd "${BUILD_DIR}" > /dev/null
+    time make -j 20 generate_verity_key 2>&1
+    [ $? -eq 0 ] || die "failed to make verity key"
+    "${BUILD_DIR}/out/host/linux-x86/bin/generate_verity_key" \
+        -convert "${BUILD_DIR}/keys/${DEVICE}/verity.x509.pem" \
+        "${BUILD_DIR}/keys/${DEVICE}/verity_key"
+    [ $? -eq 0 ] || die "failed to generate verity key"
+    time make clobber 2>&1
+    [ $? -eq 0 ] || die "failed to make clobber"
+    openssl x509 -outform der \
+            -in "${BUILD_DIR}/keys/${DEVICE}/verity.x509.pem" \
+            -out "${BUILD_DIR}/keys/${DEVICE}/verity_user.der.x509"
+    [ $? -eq 0 ] || die "failed to link x509 certificate"
+    popd > /dev/null
+}
+
+gen_avb_key () {
+    pushd "$BUILD_DIR"
+    openssl genrsa -out "${BUILD_DIR}/keys/${DEVICE}/avb.pem" 2048
+    ${BUILD_DIR}/external/avb/avbtool \
+                extract_public_key \
+                --key "${BUILD_DIR}/keys/${DEVICE}/avb.pem" \
+                --output "${BUILD_DIR}/keys/${DEVICE}/avb_pkmd.bin"
+    [ $? -eq 0 ] || die "failed to generate avb key"
+    popd
+}
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        "-h"|"--help")
+            usage
+            ;;
+        *)
+            usage "unknown argument given: $1"
+            ;;
+    esac
+    shift
+done
+
+MAKE_KEY="${BUILD_DIR}/development/tools/make_key"
+[ ! -f "${MAKE_KEY}" ] && usage "Missing: ${MAKE_KEY}"
+
+CERTIFICATE_SUBJECT="/C=CA/ST=Ontario/L=Toronto/O=CopperheadOS/OU=CopperheadOS/CN=CopperheadOS/emailAddress=copperheados@copperhead.co"
+
+mkdir -vp keys
+pushd keys > /dev/null
+for DEVICE in bullhead angler sailfish marlin walleye taimen
+do
+    if [ -d "${DEVICE}" ]
+    then
+        echo "Keys directory exists, skipping: ${DEVICE}"
+        continue
+    fi
+    mkdir -vp "${DEVICE}"
+    pushd "${DEVICE}" > /dev/null
+    for key in releasekey platform shared media verity
+    do
+        # make_key exits with unsuccessful code 1 instead of 0
+        echo | "${MAKE_KEY}" "$key" "$CERTIFICATE_SUBJECT"
+        [ $? -ne 0 ] || die "failed to make key: ${key}"
+    done
+    case "${DEVICE}" in
+        "bullhead"|"angler"|"marlin"|"sailfish")
+            gen_verity_key "${DEVICE}"
+            ;;
+        "walleye"|"taimen")
+            gen_avb_key "${DEVICE}"
+            ;;
+    esac
+    popd > /dev/null
+done
+popd > /dev/null
