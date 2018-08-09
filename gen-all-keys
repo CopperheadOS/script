@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# dump-kernel-info - retrieve the Linux kernel version from an image file
+# gen-all-keys - automate the generation of complete device signing keys
 # Copyright (C) 2018  Copperhead Limited
 ###############################################################################
 
