@@ -20,6 +20,16 @@ usage () {
     exit 1
 }
 
+umount_all_fuse () {
+    mount \
+        | grep 'type fuse' \
+        | grep 'android_img_extract' \
+        | awk {'print $3'} \
+        | xargs -n1 fusermount -u
+}
+
+trap umount_all_fuse EXIT
+
 [ $# -eq 0 ] && usage
 
 while [ $# -gt 0 ]
