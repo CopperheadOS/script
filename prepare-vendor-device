@@ -77,12 +77,12 @@ vendor/android-prepare-vendor/execute-all.sh \
     --yes --keep \
     -d $DEVICE \
     -b $BUILD_ID \
-    -o vendor/out/ \
+    -o vendor/android-prepare-vendor/ \
     ${IMAGE_OPT}
 [ $? -ne 0 ] && usage "execute-all.sh failed to run without error"
 
 build_id=$(echo $BUILD_ID | tr '[:upper:]' '[:lower:]')
-VENDOR_OUT="vendor/out/${DEVICE}/${build_id}/vendor/${VENDOR}/${DEVICE}"
+VENDOR_OUT="vendor/android-prepare-vendor/${DEVICE}/${build_id}/vendor/${VENDOR}/${DEVICE}"
 
 if [ -d "${VENDOR_OUT}" ]
 then
