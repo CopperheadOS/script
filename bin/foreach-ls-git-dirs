@@ -80,7 +80,7 @@ do
             fi
             ;;
         "-b"|"--with-branch")
-            if [ -n "${narg}" -a "${narg}" != "-w" ]
+            if [ -n "${narg}" -a "${narg}" != "-b" ]
             then
                 WITH_BRANCH="${narg}"
                 consume="true"
@@ -89,7 +89,7 @@ do
             fi
             ;;
         "-B"|"--without-branch")
-            if [ -n "${narg}" -a "${narg}" != "-w" ]
+            if [ -n "${narg}" -a "${narg}" != "-B" ]
             then
                 WITHOUT_BRANCH="${narg}"
                 consume="true"
