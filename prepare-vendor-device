@@ -76,15 +76,11 @@ case "${DEVICE}" in
         ;;
 esac
 
-mkdir -vp vendor/out
-
 IMAGE_OPT=""
-if [ -n "${SRC_IMAGE}" -a -f "${SRC_IMAGE}" ]
-then
-    IMAGE_OPT="-i ${SRC_IMAGE}"
-fi
+[ -n "${SRC_IMAGE}" -a -f "${SRC_IMAGE}" ] \
+    && IMAGE_OPT="-i ${SRC_IMAGE}"
+
 vendor/android-prepare-vendor/execute-all.sh \
-    --yes --keep \
     -d $DEVICE \
     -b $BUILD_ID \
     -o vendor/android-prepare-vendor/ \
