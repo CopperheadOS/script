@@ -24,6 +24,8 @@ function usage () {
     echo "    -W remote   only process repos without given remote"
     echo "    -b branch   only process repos on given branch"
     echo "    -B branch   only process repos not on given branch"
+    echo "    -t tag      only process repos on given tag"
+    echo "    -T tag      only process repos not on given tag"
     echo "    -e          exit on first error encountered"
     exit 1
 }
@@ -38,6 +40,8 @@ WITH_REMOTE=""
 WITHOUT_REMOTE=""
 WITH_BRANCH=""
 WITHOUT_BRANCH=""
+WITH_TAG=""
+WITHOUT_TAG=""
 EXIT_ON_ERROR=""
 consume="false"
 for i in $(seq 0 $ARGC)
@@ -95,6 +99,24 @@ do
                 consume="true"
             else
                 usage "--without-branch requires a branch name"
+            fi
+            ;;
+        "-t"|"--with-tag")
+            if [ -n "${narg}" -a "${narg}" != "-t" ]
+            then
+                WITH_TAG="${narg}"
+                consume="true"
+            else
+                usage "--with-tag requires a tag name"
+            fi
+            ;;
+        "-T"|"--without-tag")
+            if [ -n "${narg}" -a "${narg}" != "-T" ]
+            then
+                WITHOUT_TAG="${narg}"
+                consume="true"
+            else
+                usage "--without-tag requires a tag name"
             fi
             ;;
         *)
@@ -171,6 +193,18 @@ do
         rn=$(echo ${r} | perl -pe 's![^_a-zA-Z0-9]!_!g;s!_$!!;')
         export REMOTE_${rn}="${url}"
     done
+    export TAGS=$(git describe --tags)
+    export TAG=$(echo "${TAGS}" | head -1)
+    if [ -n "${WITH_TAG}" ]
+    then # skip if not found
+        echo "${TAGS}" | egrep -q "^${WITH_TAG}\$"
+        [ $? -ne 0 ] && popd > /dev/null && continue
+    fi
+    if [ -n "${WITHOUT_TAG}" ]
+    then # skip if found
+        echo "${TAGS}" | egrep -q "^${WITHOUT_TAG}\$"
+        [ $? -eq 0 ] && popd > /dev/null && continue
+    fi
     export BRANCH=$(git branch --list | grep '*' | perl -pe 's!^\*\s*!!;')
     if [ -n "${WITH_BRANCH}" ]
     then # skip if not match
