@@ -25,7 +25,7 @@ umount_all_fuse () {
         | grep 'type fuse' \
         | grep 'android_img_extract' \
         | awk {'print $3'} \
-        | xargs -n1 fusermount -u
+        | xargs -n1 -r fusermount -u
 }
 
 trap umount_all_fuse EXIT
@@ -89,6 +89,7 @@ vendor/android-prepare-vendor/execute-all.sh \
 
 build_id=$(echo $BUILD_ID | tr '[:upper:]' '[:lower:]')
 VENDOR_OUT="vendor/android-prepare-vendor/${DEVICE}/${build_id}/vendor/${VENDOR}/${DEVICE}"
+MARLIN_OUT="vendor/android-prepare-vendor/${DEVICE}/${build_id}/vendor/${VENDOR}/marlin"
 
 if [ -d "${VENDOR_OUT}" ]
 then
@@ -102,7 +103,6 @@ fi
 case "${DEVICE}" in
     "sailfish")
         rm -rf vendor/${VENDOR}/marlin
-        MARLIN_OUT="vendor/out/${DEVICE}/${build_id}/vendor/${VENDOR}/marlin"
         mv -v "${MARLIN_OUT}" vendor/${VENDOR}/
         ;;
 esac
