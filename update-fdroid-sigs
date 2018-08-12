@@ -1,6 +1,19 @@
 #!/usr/bin/env perl
 use strict;
 use File::Slurp;
+use File::Basename;
+use constant { true => 1, false => 0 };
+
+#: Replace these values with the official signing key signatures so that offline
+#: signing can be performed without requiring a complete build of the OS.
+our %OFFICIAL_SIGS =
+  ( bullhead => "0000000000000000000000000000000000000000000000000000000000000000",
+    angler   => "0000000000000000000000000000000000000000000000000000000000000000",
+    sailfish => "0000000000000000000000000000000000000000000000000000000000000000",
+    marlin   => "0000000000000000000000000000000000000000000000000000000000000000",
+    walleye  => "0000000000000000000000000000000000000000000000000000000000000000",
+    taimen   => "0000000000000000000000000000000000000000000000000000000000000000"
+  );
 
 our %PATH =
   ( 'keys' => './keys',
@@ -12,11 +25,26 @@ fatal("keys directory not found")
 fatal("ClientWhitelist.java not found")
   unless (-f $PATH{fdpe});
 
+our $USE_OFFICIAL_SIGS = false;
+foreach my $arg (@ARGV) {
+  if ($arg =~ m!^(\-h|\-\-help)$!) {
+    stderr("usage: ".basename($0)." [-h] [-O]");
+    stderr("\noptions:");
+    stderr("    -h         this helpful message");
+    stderr("    -O         use official signatures");
+    exit(1);
+  }
+  if ($arg =~ m!^(\-O|\-\-official)$!) {
+    $USE_OFFICIAL_SIGS = true;
+    last;
+  }
+}
+
 our @DEVICES = qw(bullhead angler sailfish marlin walleye taimen);
 my $RAW_FDPE = read_file($PATH{fdpe});
 
 foreach my $device (@DEVICES) {
-  my $sig = get_fingerprint($device);
+  my $sig = ($USE_OFFICIAL_SIGS) ? $OFFICIAL_SIGS{$device} : get_fingerprint($device);
   stdout($sig." ".$device);
   $RAW_FDPE =~ s!^(\s*new Pair<>\(".+?", ").+?("\s*\),??\s*//\s*\Q$device\E releasekey)\s*$!${1}${sig}${2}!m;
 }
@@ -42,11 +70,13 @@ sub stdout {
     print STDOUT $_."\n";
   }
 }
+
 sub stderr {
   foreach (@_) {
     print STDERR $_."\n";
   }
 }
+
 sub fatal {
   stderr(@_);
   exit 1;
