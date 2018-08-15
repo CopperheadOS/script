@@ -57,8 +57,6 @@ fi
 build/tools/releasetools/sign_target_files_apks -o -d "$KEY_DIR" "${VERITY_SWITCHES[@]}" \
   $2 $OUT/$TARGET_FILES || exit 1
 
-cp $OUT/$TARGET_FILES $OUT/$TARGET_FILES.bak
-
 if [[ $DEVICE != hikey* ]]; then
   build/tools/releasetools/ota_from_target_files --block -k "$KEY_DIR/releasekey" "${EXTRA_OTA[@]}" $OUT/$TARGET_FILES \
     $OUT/$DEVICE-ota_update-$BUILD.zip || exit 1
@@ -75,7 +73,7 @@ else
   source ../../device/common/generate-factory-images-common.sh
 fi
 
-mv $TARGET_FILES.bak $TARGET_FILES
+rm $TARGET_FILES
 mv $DEVICE-$VERSION-factory.tar $DEVICE-factory-$BUILD_NUMBER.tar
 rm -f $DEVICE-factory-$BUILD_NUMBER.tar.xz
 xz -v --lzma2=dict=512MiB,lc=3,lp=0,pb=2,mode=normal,nice=64,mf=bt4,depth=0 $DEVICE-factory-$BUILD_NUMBER.tar
