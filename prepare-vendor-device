@@ -89,24 +89,16 @@ vendor/android-prepare-vendor/execute-all.sh \
 [ $? -ne 0 ] && usage "execute-all.sh failed to run without error"
 
 build_id=$(echo $BUILD_ID | tr '[:upper:]' '[:lower:]')
-VENDOR_OUT="vendor/android-prepare-vendor/${DEVICE}/${build_id}/vendor/${VENDOR}/${DEVICE}"
-MARLIN_OUT="vendor/android-prepare-vendor/${DEVICE}/${build_id}/vendor/${VENDOR}/marlin"
+VENDOR_OUT="vendor/android-prepare-vendor/${DEVICE}/${build_id}/vendor/${VENDOR}"
 
 if [ -d "${VENDOR_OUT}" ]
 then
     mkdir -vp vendor/${VENDOR}
     rm -rf vendor/${VENDOR}/${DEVICE}
-    mv -v "${VENDOR_OUT}" vendor/${VENDOR}/
+    mv -v "${VENDOR_OUT}/*" vendor/${VENDOR}/
 else
     usage "output path not found: ${VENDOR_OUT}"
 fi
-
-case "${DEVICE}" in
-    "sailfish")
-        rm -rf vendor/${VENDOR}/marlin
-        mv -v "${MARLIN_OUT}" vendor/${VENDOR}/
-        ;;
-esac
 
 echo "exiting normally."
 exit 0
