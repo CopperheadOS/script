@@ -24,7 +24,8 @@ elif [[ $1 == marlin || $1 == sailfish || $1 == taimen || $1 == walleye ]]; then
 elif [[ $1 == hikey || $1 == hikey960 ]]; then
   :
 else
-  user_error
+  echo "incorrect device argument, must be a google device!"
+  exit 1
 fi
 
 BUILD=$BUILD_NUMBER
