@@ -95,7 +95,9 @@ if [ -d "${VENDOR_OUT}" ]
 then
     mkdir -vp vendor/${VENDOR}
     rm -rf vendor/${VENDOR}/${DEVICE}
-    mv -v "${VENDOR_OUT}/*" vendor/${VENDOR}/
+    for device_dir in $(ls "${VENDOR_OUT}/"); do
+        mv -v "${VENDOR_OUT}/${device_dir}" vendor/${VENDOR}/
+    done
 else
     usage "output path not found: ${VENDOR_OUT}"
 fi
