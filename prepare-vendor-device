@@ -17,7 +17,6 @@ usage () {
     echo "    * device must be one of: bullhead, angler, sailfish, marlin, walleye, taimen"
     echo "    * build_id is just the BUILD_ID, without the appended number"
     echo "    * requires android-prepare-vendor patched for URL and fuse-ext2"
-    exit 1
 }
 
 umount_all_fuse () {
@@ -103,4 +102,3 @@ else
 fi
 
 echo "exiting normally."
-exit 0
