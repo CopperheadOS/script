@@ -61,9 +61,16 @@ build/tools/releasetools/sign_target_files_apks -o -d "$KEY_DIR" "${VERITY_SWITC
 if [[ $DEVICE != hikey* ]]; then
   build/tools/releasetools/ota_from_target_files --block -k "$KEY_DIR/releasekey" "${EXTRA_OTA[@]}" $OUT/$TARGET_FILES \
     $OUT/$DEVICE-ota_update-$BUILD.zip || exit 1
+  if [[ ! -z $3 ]]
+    # extract the build number from the old target files
+    OLDBUILD=$(basename $3 .zip | sed 's/^[^-]*-//g' | sed 's/^[^-]*-//g')
+    build/tools/releasetools/ota_from_target_files --block -k "$KEY_DIR/releasekey" "${EXTRA_OTA[@]}" -i $3 $OUT/$TARGET_FILES \
+      $OUT/$DEVICE-incremental-$OLDBUILD-$BUILD.zip || exit 1
+  fi
 fi
 
-build/tools/releasetools/img_from_target_files -n $OUT/$TARGET_FILES \
+cp $OUT/$TARGET_FILES $OUT/image-$TARGET_FILES
+build/tools/releasetools/img_from_target_files -n $OUT/image-$TARGET_FILES \
   $OUT/$DEVICE-img-$BUILD.zip || exit 1
 
 cd $OUT || exit 1
@@ -74,7 +81,7 @@ else
   source ../../device/common/generate-factory-images-common.sh
 fi
 
-rm $TARGET_FILES
+rm image-$TARGET_FILES
 mv $DEVICE-$VERSION-factory.tar $DEVICE-factory-$BUILD_NUMBER.tar
 rm -f $DEVICE-factory-$BUILD_NUMBER.tar.xz
 xz -v --lzma2=dict=512MiB,lc=3,lp=0,pb=2,mode=normal,nice=64,mf=bt4,depth=0 $DEVICE-factory-$BUILD_NUMBER.tar
