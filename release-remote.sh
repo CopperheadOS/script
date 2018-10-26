@@ -61,7 +61,7 @@ build/tools/releasetools/sign_target_files_apks -o -d "$KEY_DIR" "${VERITY_SWITC
 if [[ $DEVICE != hikey* ]]; then
   build/tools/releasetools/ota_from_target_files --block -k "$KEY_DIR/releasekey" "${EXTRA_OTA[@]}" $OUT/$TARGET_FILES \
     $OUT/$DEVICE-ota_update-$BUILD.zip || exit 1
-  if [[ ! -z $3 ]]
+  if [[ ! -z $3 ]]; then
     # extract the build number from the old target files
     OLDBUILD=$(basename $3 .zip | sed 's/^[^-]*-//g' | sed 's/^[^-]*-//g')
     build/tools/releasetools/ota_from_target_files --block -k "$KEY_DIR/releasekey" "${EXTRA_OTA[@]}" -i $3 $OUT/$TARGET_FILES \
