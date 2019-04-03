@@ -140,6 +140,7 @@ export LC_COLLATE=C
 export LANG=C
 export _JAVA_OPTIONS=-XX:-UsePerfData
 export DISPLAY_BUILD_NUMBER=true
+export HAS_BUILD_NUMBER=true
 echo "${PATH}" | grep -q "${PWD}/script/bin"
 [ $? -ne 0 ] && export PATH="$PWD/script/bin:$PATH"
 
