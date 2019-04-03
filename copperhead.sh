@@ -250,7 +250,7 @@ then
     then
         echo "Modifying: packages/apps/Updater/res/values/config.xml"
         echo "Using Updater URL: ${MODIFY_UPDATE_URL}"
-        perl -i -pe "s@https://release.copperhead.co/@${MODIFY_UPDATE_URL}@g" \
+        perl -i -pe "s@https://releases.copperhead.co/@${MODIFY_UPDATE_URL}@g" \
              packages/apps/Updater/res/values/config.xml
     else
         echo "Skipping: packages/apps/Updater/res/values/config.xml"
