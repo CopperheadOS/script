@@ -85,3 +85,5 @@ rm image-$TARGET_FILES
 mv $DEVICE-$VERSION-factory.tar $DEVICE-factory-$BUILD_NUMBER.tar
 rm -f $DEVICE-factory-$BUILD_NUMBER.tar.xz
 xz -v --lzma2=dict=512MiB,lc=3,lp=0,pb=2,mode=normal,nice=64,mf=bt4,depth=0 $DEVICE-factory-$BUILD_NUMBER.tar
+build_date=$(cat ../build_date.txt)
+echo "$BUILD_NUMBER $build_date $VERSION" > $DEVICE-stable
