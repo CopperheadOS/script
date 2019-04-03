@@ -93,9 +93,10 @@ VENDOR_OUT="vendor/android-prepare-vendor/${DEVICE}/${build_id}/vendor/${VENDOR}
 if [ -d "${VENDOR_OUT}" ]
 then
     mkdir -vp vendor/${VENDOR}
-    rm -rf vendor/${VENDOR}/${DEVICE}
     for device_dir in $(ls "${VENDOR_OUT}/"); do
-        mv -v "${VENDOR_OUT}/${device_dir}" vendor/${VENDOR}/
+        rm -rf vendor/${VENDOR}/${device_dir}
+        rsync -av "${VENDOR_OUT}/${device_dir}" vendor/${VENDOR}
+        rm -rf "${VENDOR_OUT}/${device_dir}"
     done
 else
     usage "output path not found: ${VENDOR_OUT}"
