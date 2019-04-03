@@ -80,7 +80,7 @@ IMAGE_OPT=""
     && IMAGE_OPT="-i ${SRC_IMAGE}"
 
 vendor/android-prepare-vendor/execute-all.sh \
-    --keep --yes \
+    --keep --yes --debugfs \
     --device  $DEVICE \
     --buildID $BUILD_ID \
     --output  vendor/android-prepare-vendor/ \
