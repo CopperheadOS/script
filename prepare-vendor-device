@@ -67,7 +67,7 @@ case "${DEVICE}" in
     "angler")
         VENDOR="huawei"
         ;;
-    "sailfish"|"marlin"|"walleye"|"taimen")
+    "sailfish"|"marlin"|"walleye"|"taimen"|"blueline"|"crosshatch")
         VENDOR="google_devices"
         ;;
     *)
